@@ -1,21 +1,34 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import columnData from "../../mock/thumbnail.json";
 
 const PAGE_SIZE = 8;
 const allData = [...columnData.thumbnail, ...columnData.extraThumbnail];
 
 export const useColumnThumbnail = () => {
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const { data, fetchNextPage, hasNextPage } = useInfiniteQuery({
+    queryKey: ["columns", "thumbnails"],
+    queryFn: ({ pageParam }) => {
+      const start = pageParam * PAGE_SIZE;
+      const items = allData.slice(start, start + PAGE_SIZE);
+      return Promise.resolve({
+        items,
+        nextPage: start + PAGE_SIZE < allData.length ? pageParam + 1 : undefined,
+      });
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+  });
 
   const items = useMemo(
-    () => allData.slice(0, visibleCount),
-    [visibleCount],
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data],
   );
 
-  const hasMore = visibleCount < allData.length;
+  const hasMore = !!hasNextPage;
 
   const loadMore = () => {
-    setVisibleCount((prev) => prev + PAGE_SIZE);
+    fetchNextPage();
   };
 
   return { items, hasMore, loadMore };

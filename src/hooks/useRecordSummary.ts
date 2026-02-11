@@ -1,7 +1,11 @@
-import {recordSummary} from "../../mock/records"
+import { useQuery } from "@tanstack/react-query";
+import { recordSummary } from "../../mock/records";
 
 export const useRecordSummary = () => {
-    return {
-        data: recordSummary
-    }
-}
+  const { data = [] } = useQuery({
+    queryKey: ["records", "summary"],
+    queryFn: () => Promise.resolve(recordSummary),
+  });
+
+  return { data };
+};

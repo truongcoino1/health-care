@@ -9,6 +9,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.21",
     "axios": "^1.13.5",
     "highcharts": "^11.4.8",
     "highcharts-react-official": "^3.2.1",

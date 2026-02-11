@@ -1,41 +1,46 @@
-import { useEffect, useMemo, useState } from "react";
-import { getMealTitle, meal } from "../../mock/foods";
+import { useMemo } from "react";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { getMealTitle, meal, MealItem } from "../../mock/foods";
 
 const PAGE_SIZE = 8;
 
+const getFiltered = (active: string): MealItem[] =>
+  meal.filter((el) => (active !== "all" ? el.category === active : true));
+
 export const useFoodList = (active: string) => {
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [active]);
-
-  const filtered = useMemo(
-    () =>
-      meal.filter((el) =>
-        active !== "all" ? el.category === active : true,
-      ),
-    [active],
-  );
+  const { data, fetchNextPage, hasNextPage } = useInfiniteQuery({
+    queryKey: ["foods", "meals", active],
+    queryFn: ({ pageParam }) => {
+      const filtered = getFiltered(active);
+      const start = pageParam * PAGE_SIZE;
+      const items = filtered.slice(start, start + PAGE_SIZE);
+      return Promise.resolve({
+        items,
+        nextPage:
+          start + PAGE_SIZE < filtered.length ? pageParam + 1 : undefined,
+      });
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+    placeholderData: keepPreviousData,
+  });
 
   const items = useMemo(
     () =>
-      filtered.slice(0, visibleCount).map((e) => ({
-        title: getMealTitle(e.date, e.category),
-        url: e.url,
-      })),
-    [filtered, visibleCount],
+      data?.pages
+        .flatMap((page) => page.items)
+        .map((e) => ({
+          title: getMealTitle(e.date, e.category),
+          url: e.url,
+        })) ?? [],
+    [data],
   );
 
-  const hasMore = visibleCount < filtered.length;
+  const hasMore = !!hasNextPage;
 
   const loadMore = () => {
-    setVisibleCount((prev) => prev + PAGE_SIZE);
+    fetchNextPage();
   };
 
-  const resetPagination = () => {
-    setVisibleCount(PAGE_SIZE);
-  };
-
-  return { items, hasMore, loadMore, resetPagination };
+  return { items, hasMore, loadMore };
 };
